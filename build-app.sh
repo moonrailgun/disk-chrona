@@ -3,7 +3,7 @@
 set -e
 cd "$(dirname "$0")"
 CONFIG=${1:-release}
-VERSION=1.0.0
+VERSION=1.0.1
 swift build -c "$CONFIG"
 APP=build/DiskChrona.app
 rm -rf "$APP"
