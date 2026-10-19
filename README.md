@@ -12,8 +12,6 @@ A macOS menu bar app that continuously records file size changes on your disk, s
 
 DiskChrona is built on FSEvents and only `lstat`s files. It **never reads file contents**, and all data stays on your Mac.
 
-The interface is in Simplified Chinese.
-
 ## Install
 
 Requirements: macOS 15 or later, Apple Silicon (arm64).
