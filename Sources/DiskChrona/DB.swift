@@ -11,7 +11,7 @@ final class DB {
     private var statements: [String: OpaquePointer] = [:]
 
     init(path: String) throws {
-        guard sqlite3_open(path, &handle) == SQLITE_OK else { throw DBError(description: "无法打开数据库 \(path)") }
+        guard sqlite3_open(path, &handle) == SQLITE_OK else { throw DBError(description: "Can't open database \(path)") }
         sqlite3_busy_timeout(handle, 5000)
         guard sqlite3_create_function_v2(handle, "is_swap", 1, SQLITE_UTF8 | SQLITE_DETERMINISTIC, nil, { context, _, values in
             guard let value = values?[0], let path = sqlite3_value_text(value) else { sqlite3_result_int(context, 0); return }
@@ -159,11 +159,11 @@ struct RankRow: Identifiable, Hashable {
 }
 
 enum Metric: String, CaseIterable {
-    case size = "文件大小", alloc = "分配空间"
+    case size = "File size", alloc = "Allocated space"
     var delta: String { self == .size ? "(new_size - old_size)" : "(new_alloc - old_alloc)" }
 }
 
-enum RankSort: String, CaseIterable { case growth = "累计增长", net = "净变化" }
+enum RankSort: String, CaseIterable { case growth = "Total growth", net = "Net change" }
 
 func likePattern(_ s: String) -> String {
     "%" + s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "%", with: "\\%").replacingOccurrences(of: "_", with: "\\_") + "%"

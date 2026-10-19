@@ -135,20 +135,20 @@ struct EngineStatus {
     var symbol: String { limited != nil ? "exclamationmark.octagon" : paused ? "pause.circle" : isHealthy ? "checkmark.circle" : "clock.arrow.circlepath" }
 
     var summary: String {
-        if limited != nil { return "记录受限" }
-        if paused { return "已暂停" }
-        if roots.isEmpty { return "启动中" }
-        if rescanning || backlog > 0 { return "补查中" + (backlog > 0 ? "（积压 \(backlog)）" : "") }
-        if hasProblem { return "部分覆盖" }
-        return "监控正常"
+        if limited != nil { return "Recording limited" }
+        if paused { return "Paused" }
+        if roots.isEmpty { return "Starting" }
+        if rescanning || backlog > 0 { return "Catching up" + (backlog > 0 ? " (\(backlog) queued)" : "") }
+        if hasProblem { return "Partial coverage" }
+        return "Monitoring"
     }
 
     func rootStatus(_ r: Root) -> String {
         let s = states[r.id] ?? RootState()
-        if paused { return "暂停" }
+        if paused { return "Paused" }
         if let p = s.problem { return p }
-        if rescanning || backlog > 0 { return "补查中" }
-        return s.unreadable.isEmpty ? "正常" : "部分覆盖"
+        if rescanning || backlog > 0 { return "Catching up" }
+        return s.unreadable.isEmpty ? "OK" : "Partial coverage"
     }
 }
 
@@ -282,7 +282,7 @@ final class Engine: ObservableObject {
             db = try DB(path: databasePath)
             try db.migrate()
             reader = try DB(path: databasePath)
-        } catch { fatalError("无法打开数据库 \(databasePath)：\(error)") }
+        } catch { fatalError("Can't open database \(databasePath): \(error)") }
         let now = Date().timeIntervalSince1970
         work.sync {
             loadRoots()
@@ -819,7 +819,7 @@ final class Engine: ObservableObject {
         st.volumeFree = free
         if let free { _ = try? db.run("INSERT INTO volume(ts, free) VALUES(?, ?)", [now, free]) }
         if let free, free < Engine.minFreeBytes {
-            st.limited = "磁盘可用空间不足 \(ByteCountFormatter.string(fromByteCount: Engine.minFreeBytes, countStyle: .file))，已停止扩张记录；变化会在空间恢复后补查。"
+            st.limited = "Less than \(ByteCountFormatter.string(fromByteCount: Engine.minFreeBytes, countStyle: .file)) of disk space is free, so recording has stopped growing. Changes will be caught up once space is freed."
         } else if st.limited != nil {
             // Space recovered, or retry once a minute after a write failure (no retry storm, no log growth).
             st.limited = nil
@@ -849,7 +849,7 @@ final class Engine: ObservableObject {
             var trimmed = false
             while dataSize() > budget {
                 guard try db.run("DELETE FROM changes WHERE id IN (SELECT id FROM changes ORDER BY id LIMIT 20000)") > 0 else {
-                    st.warning = "仅当前文件大小记录就已超出容量预算，请排除高频目录或提高预算。"
+                    st.warning = "Current file size records alone exceed the size budget. Exclude high-churn folders or raise the budget."
                     break
                 }
                 trimmed = true
@@ -857,7 +857,7 @@ final class Engine: ObservableObject {
             }
             st.earliest = try db.double("SELECT MIN(ts_prev) FROM changes").map(Date.init(timeIntervalSince1970:))
             if trimmed, st.warning == nil, let e = st.earliest {
-                st.warning = "已按容量预算收缩最旧历史，最早可查询时间：\(e.formatted(date: .abbreviated, time: .shortened))。"
+                st.warning = "The oldest history was trimmed to fit the size budget. Earliest available: \(e.formatted(date: .abbreviated, time: .shortened))."
             }
             st.dataBytes = dataSize()
             dirty = true
@@ -903,7 +903,7 @@ final class Engine: ObservableObject {
     }
 
     private func problemText(_ e: Int32) -> String {
-        e == ENOENT ? "离线（目录不存在或卷未挂载）" : "权限不足（\(String(cString: strerror(e)))）"
+        e == ENOENT ? "Offline (folder missing or volume not mounted)" : "Permission denied (\(String(cString: strerror(e))))"
     }
 
     private func dataSize() -> Int64 {
@@ -915,7 +915,7 @@ final class Engine: ObservableObject {
 
     private func fail(_ error: Error) {
         writeFailed = true
-        st.limited = "数据库写入失败，已停止记录（\(error)）。未保存的变化不会标为已记录，每分钟重试一次。"
+        st.limited = "Database write failed, so recording has stopped (\(error)). Unsaved changes are not marked as recorded; retrying every minute."
         publish()
     }
 

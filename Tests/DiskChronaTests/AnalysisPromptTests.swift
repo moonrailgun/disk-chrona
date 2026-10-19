@@ -3,7 +3,7 @@ import XCTest
 
 final class AnalysisPromptTests: XCTestCase {
     func testPromptPreservesDatabasePathAndSelectedRangeForTheAgent() throws {
-        let path = "/tmp/分析 \"资料\"/DiskChrona.sqlite"
+        let path = "/tmp/analysis \"data\" é/DiskChrona.sqlite"
         let interval = DateInterval(start: Date(timeIntervalSince1970: 1_800_000_000), duration: 3600)
         for ignoreSwap in [false, true] {
             let prompt = try analysisPrompt(databasePath: path, interval: interval, ignoreSwap: ignoreSwap)

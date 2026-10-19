@@ -8,7 +8,7 @@ func signed(_ n: Int64) -> String { n > 0 ? "+" + bytes(n) : n < 0 ? "−" + byt
 func timeText(_ d: Date) -> String { d.formatted(date: .abbreviated, time: .standard) }
 func fileName(_ p: String) -> String { (p as NSString).lastPathComponent }
 
-@MainActor func pickFolder(start: String? = nil, message: String = "选择要监控的本地目录") -> String? {
+@MainActor func pickFolder(start: String? = nil, message: String = "Choose a local folder to monitor") -> String? {
     let panel = NSOpenPanel()
     panel.canChooseDirectories = true
     panel.canChooseFiles = false
@@ -24,23 +24,23 @@ extension Change {
     var interval: String { "\(timeText(tsPrev)) — \(timeText(ts))" }
     var summary: String {
         switch kind {
-        case .added: "新增"
-        case .deleted: "删除"
+        case .added: "Added"
+        case .deleted: "Deleted"
         case .grew, .shrank:
-            if newSize == oldSize { "分配空间 \(signed(newAlloc - oldAlloc))" }
-            else if kind == .grew { "增长 \(bytes(newSize - oldSize))" }
-            else { "缩小 \(bytes(oldSize - newSize))" }
-        case .moveIn: "移动自 \(otherPath ?? "?")"
-        case .moveOut: "移动至 \(otherPath ?? "?")"
-        case .scopeIn: "移入监控范围（范围变化）"
-        case .scopeOut: "移出监控范围（范围变化）"
-        case .firstSeen: "首次观察（此前大小未知）"
+            if newSize == oldSize { "Allocated \(signed(newAlloc - oldAlloc))" }
+            else if kind == .grew { "Grew \(bytes(newSize - oldSize))" }
+            else { "Shrank \(bytes(oldSize - newSize))" }
+        case .moveIn: "Moved from \(otherPath ?? "?")"
+        case .moveOut: "Moved to \(otherPath ?? "?")"
+        case .scopeIn: "Entered monitored scope (scope change)"
+        case .scopeOut: "Left monitored scope (scope change)"
+        case .firstSeen: "First seen (previous size unknown)"
         }
     }
 }
 
 enum Span: String, CaseIterable, Identifiable {
-    case hour = "最近一小时", today = "今天", week = "最近七天", custom = "自定义"
+    case hour = "Last hour", today = "Today", week = "Last 7 days", custom = "Custom"
     var id: Self { self }
 }
 
@@ -101,10 +101,10 @@ struct QueryOverlay: ViewModifier {
                         VStack(spacing: 12) {
                             if loading {
                                 ProgressView().controlSize(.large)
-                                Text("正在加载数据…")
+                                Text("Loading data…")
                             } else {
                                 Image(systemName: "exclamationmark.triangle").font(.title2)
-                                Text("暂时无法读取数据，请重新选择时间范围")
+                                Text("Couldn't read data. Try choosing the time range again.")
                             }
                         }
                         .font(.callout)
@@ -134,25 +134,25 @@ struct MainView: View {
             CoverageBanner(range: range)
             TabView(selection: $tab) {
                 OverviewView(range: range, openFile: { detail = DetailTarget(path: $0) }, browse: { focusDir = $0; tab = 1 })
-                    .tabItem { Text("概览") }.tag(0)
-                RankingView(range: range, focus: $focusDir) { detail = DetailTarget(path: $0) }.tabItem { Text("排行") }.tag(1)
-                ChangeLogView(range: range) { detail = DetailTarget(path: $0) }.tabItem { Text("原始记录") }.tag(2)
-                SettingsView().tabItem { Text("设置") }.tag(3)
+                    .tabItem { Text("Overview") }.tag(0)
+                RankingView(range: range, focus: $focusDir) { detail = DetailTarget(path: $0) }.tabItem { Text("Ranking") }.tag(1)
+                ChangeLogView(range: range) { detail = DetailTarget(path: $0) }.tabItem { Text("Raw Log") }.tag(2)
+                SettingsView().tabItem { Text("Settings") }.tag(3)
             }
         }
         .padding()
         .frame(minWidth: 960, minHeight: 600)
         .sheet(item: $detail) { FileDetailView(path: $0.path) }
         .toolbar {
-            Button(copyResult ?? "复制 AI 分析提示词", systemImage: "doc.on.clipboard") {
+            Button(copyResult ?? "Copy AI Analysis Prompt", systemImage: "doc.on.clipboard") {
                 do {
                     let prompt = try analysisPrompt(databasePath: engine.databasePath, interval: range.interval(), ignoreSwap: engine.ignoreSwap)
                     NSPasteboard.general.clearContents()
-                    copyResult = NSPasteboard.general.setString(prompt, forType: .string) ? "已复制" : "复制失败，请重试"
-                } catch { copyResult = "复制失败，请重试" }
+                    copyResult = NSPasteboard.general.setString(prompt, forType: .string) ? "Copied" : "Copy failed, try again"
+                } catch { copyResult = "Copy failed, try again" }
             }
             .labelStyle(.titleAndIcon)
-            .help("复制后粘贴给本地 AI agent，按当前时间范围和 Swap 设置只读分析磁盘记录。提示词包含本机数据库路径。")
+            .help("Paste into a local AI agent to analyze the disk records read-only, using the current time range and swap setting. The prompt includes this Mac's database path.")
             .task(id: copyResult) {
                 guard copyResult != nil else { return }
                 do {
@@ -181,18 +181,18 @@ struct HeaderView: View {
         let s = engine.status
         HStack(spacing: 14) {
             Label(s.summary, systemImage: s.symbol).font(.headline).foregroundStyle(s.isHealthy ? .green : .orange)
-            Text("监控整个磁盘").foregroundStyle(.secondary)
-            if let t = s.confirmedAt { Text("数据更新至 \(t.formatted(date: .omitted, time: .standard))").foregroundStyle(.secondary) }
-            Text("卷可用空间 \(s.volumeFree.map(bytes) ?? "不可用")").foregroundStyle(.secondary).help("不含系统可清除空间，可能小于 Finder 显示的数值")
+            Text("Monitoring entire disk").foregroundStyle(.secondary)
+            if let t = s.confirmedAt { Text("Data through \(t.formatted(date: .omitted, time: .standard))").foregroundStyle(.secondary) }
+            Text("Volume free space: \(s.volumeFree.map(bytes) ?? "unavailable")").foregroundStyle(.secondary).help("Excludes purgeable space, so it may be lower than Finder shows")
             Spacer()
             if range.span == .custom {
-                DatePicker("从", selection: $range.from).labelsHidden()
-                Text("至")
-                DatePicker("至", selection: $range.to).labelsHidden()
+                DatePicker("From", selection: $range.from).labelsHidden()
+                Text("to")
+                DatePicker("to", selection: $range.to).labelsHidden()
             }
-            Picker("时间范围", selection: $range.span) { ForEach(Span.allCases) { Text($0.rawValue).tag($0) } }
+            Picker("Time range", selection: $range.span) { ForEach(Span.allCases) { Text($0.rawValue).tag($0) } }
                 .labelsHidden().fixedSize()
-            Button(s.paused ? "恢复监控" : "暂停监控") { engine.setPaused(!s.paused) }
+            Button(s.paused ? "Resume Monitoring" : "Pause Monitoring") { engine.setPaused(!s.paused) }
         }
     }
 }
@@ -222,12 +222,12 @@ struct CoverageBanner: View {
         var out = [s.limited, s.warning].compactMap { $0 }
         let gaps = query.value
         if query.isLoading(range) {
-            out.append("正在更新监控覆盖情况…")
+            out.append("Updating monitoring coverage…")
         } else if !gaps.isEmpty {
             let total = Duration.seconds(gaps.map(\.duration).reduce(0, +))
-            out.append("部分区间：所选范围内有 \(gaps.count) 段未监控（暂停、退出、休眠或开始监控前），共约 \(total.formatted(.units(allowed: [.days, .hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 2)))。其间的变化只能在恢复后按检测时间记录。")
+            out.append("Partial coverage: the selected range has \(gaps.count) unmonitored periods (paused, quit, asleep, or before monitoring started), about \(total.formatted(.units(allowed: [.days, .hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 2))) in total. Changes during them can only be recorded when detected after monitoring resumes.")
         }
-        out += s.roots.compactMap { r in s.states[r.id]?.problem.map { "\(r.path)：\($0)，已有历史保留，不视为删除。" } }
+        out += s.roots.compactMap { r in s.states[r.id]?.problem.map { "\(r.path): \($0). Existing history is kept and not treated as deleted." } }
         return out
     }
 }
@@ -252,31 +252,31 @@ struct RankingView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Picker("视图", selection: $byDir) { Text("文件").tag(false); Text("目录").tag(true) }.pickerStyle(.segmented).fixedSize()
-                Picker("口径", selection: $metric) { ForEach(Metric.allCases, id: \.self) { Text($0.rawValue) } }.fixedSize()
-                Picker("排序", selection: $sort) { ForEach(RankSort.allCases, id: \.self) { Text($0.rawValue) } }.fixedSize()
+                Picker("View", selection: $byDir) { Text("Files").tag(false); Text("Folders").tag(true) }.pickerStyle(.segmented).fixedSize()
+                Picker("Measure", selection: $metric) { ForEach(Metric.allCases, id: \.self) { Text($0.rawValue) } }.fixedSize()
+                Picker("Sort", selection: $sort) { ForEach(RankSort.allCases, id: \.self) { Text($0.rawValue) } }.fixedSize()
                 Spacer()
-                TextField("搜索名称或路径", text: $search).textFieldStyle(.roundedBorder).frame(width: 240)
+                TextField("Search name or path", text: $search).textFieldStyle(.roundedBorder).frame(width: 240)
             }
             if byDir { breadcrumb }
             Table(rows, selection: $selection) {
-                TableColumn("名称") { r in
+                TableColumn("Name") { r in
                     HStack(spacing: 6) {
                         Label(r.name, systemImage: r.isDir ? "folder" : "doc").lineLimit(1)
                         if let tag = locationTag(r.path) { TagView(text: tag) }
                     }
                 }
-                TableColumn("路径") { r in Text(r.path).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle).help(r.path) }
-                TableColumn("净变化") { r in Text(signed(r.net)).monospacedDigit() }.width(100)
-                TableColumn("观察到的累计增长") { r in Text(signed(r.growth)).monospacedDigit() }.width(120)
-                TableColumn("最近检测") { r in Text(timeText(r.last)) }.width(160)
+                TableColumn("Path") { r in Text(r.path).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle).help(r.path) }
+                TableColumn("Net change") { r in Text(signed(r.net)).monospacedDigit() }.width(100)
+                TableColumn("Observed total growth") { r in Text(signed(r.growth)).monospacedDigit() }.width(120)
+                TableColumn("Last detected") { r in Text(timeText(r.last)) }.width(160)
             }
             .contextMenu(forSelectionType: RankRow.ID.self) { _ in } primaryAction: { ids in
                 guard let r = rows.first(where: { ids.contains($0.id) }) else { return }
                 if r.isDir { dir = r.path } else { open(r.path) }
             }
-            .overlay { if rows.isEmpty { ContentUnavailableView("所选时间段内没有记录到变化", systemImage: "chart.bar") } }
-            Text("双击目录逐级展开，双击文件查看详情。累计增长是观察到的正向变化之和，不等于写入字节总量；移动计为目录间转移，不计入全局新增。")
+            .overlay { if rows.isEmpty { ContentUnavailableView("No changes recorded in the selected period", systemImage: "chart.bar") } }
+            Text("Double-click a folder to drill down, or a file to see its details. Total growth is the sum of observed increases, not the total bytes written; moves count as transfers between folders, not as new growth overall.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .padding(8)
@@ -303,7 +303,7 @@ struct RankingView: View {
             acc.append((String(c), (acc.last?.1 ?? "") + "/" + c))
         }
         return HStack(spacing: 4) {
-            Button("磁盘") { dir = "/" }.buttonStyle(.link)
+            Button("Disk") { dir = "/" }.buttonStyle(.link)
             ForEach(parts, id: \.1) { name, path in
                 Text("›").foregroundStyle(.secondary)
                 Button(name) { dir = path }.buttonStyle(.link)
@@ -328,13 +328,13 @@ struct ChangeLogView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(rows.count >= limit ? "仅显示最近 \(limit) 条" : "共 \(rows.count) 条").foregroundStyle(.secondary)
+                Text(rows.count >= limit ? "Showing the latest \(limit) only" : "\(rows.count) records").foregroundStyle(.secondary)
                 Spacer()
-                TextField("搜索名称或路径", text: $search).textFieldStyle(.roundedBorder).frame(width: 240)
+                TextField("Search name or path", text: $search).textFieldStyle(.roundedBorder).frame(width: 240)
             }
             Table(rows, selection: $selection) {
-                TableColumn("检测时间") { c in Text(timeText(c.ts)).help("观察区间：\(c.interval)") }.width(160)
-                TableColumn("文件") { c in
+                TableColumn("Detected") { c in Text(timeText(c.ts)).help("Observed interval: \(c.interval)") }.width(160)
+                TableColumn("File") { c in
                     VStack(alignment: .leading) {
                         HStack(spacing: 6) {
                             Text(fileName(c.path))
@@ -344,15 +344,15 @@ struct ChangeLogView: View {
                     }
                     .lineLimit(1).help(c.path)
                 }
-                TableColumn("大小变化") { c in Text(c.sizeText).monospacedDigit() }.width(180)
-                TableColumn("分配空间") { c in Text(c.allocText).monospacedDigit().foregroundStyle(.secondary) }.width(180)
-                TableColumn("事件") { c in Text(c.summary).lineLimit(1).help(c.summary) }
+                TableColumn("Size change") { c in Text(c.sizeText).monospacedDigit() }.width(180)
+                TableColumn("Allocated space") { c in Text(c.allocText).monospacedDigit().foregroundStyle(.secondary) }.width(180)
+                TableColumn("Event") { c in Text(c.summary).lineLimit(1).help(c.summary) }
             }
             .contextMenu(forSelectionType: Change.ID.self) { _ in } primaryAction: { ids in
                 if let c = rows.first(where: { ids.contains($0.id) }) { open(c.path) }
             }
-            .overlay { if rows.isEmpty { ContentUnavailableView("所选时间段内没有记录到变化", systemImage: "clock") } }
-            Text("每分钟汇总落盘一次，同一文件一分钟内的多次变化合并为一条；检测时间是观察到变化的时间，不是写入的准确时间。不预先扫描磁盘：文件第一次被写到时记为「首次观察」，之后记录大小增减；大小不变的写入不记录。")
+            .overlay { if rows.isEmpty { ContentUnavailableView("No changes recorded in the selected period", systemImage: "clock") } }
+            Text("Changes are saved once a minute, and multiple changes to the same file within a minute are merged into one record. The detected time is when a change was observed, not the exact write time. The disk is not scanned up front: a file is recorded as \"first seen\" the first time it is written, and size increases and decreases are recorded after that; writes that don't change the size are not recorded.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .padding(8)
@@ -389,27 +389,27 @@ struct FileDetailView: View {
             }
             Text(path).textSelection(.enabled).foregroundStyle(.secondary)
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 4) {
-                GridRow { Text("最近已知大小").foregroundStyle(.secondary); Text(file.map { bytes($0.size) } ?? "不可用") }
-                GridRow { Text("分配空间").foregroundStyle(.secondary); Text(file.map { bytes($0.alloc) } ?? "不可用") }
-                GridRow { Text("最近观察").foregroundStyle(.secondary); Text(file.map { timeText(Date(timeIntervalSince1970: $0.seenAt)) } ?? "—") }
-                GridRow { Text("修改时间（仅供参考）").foregroundStyle(.secondary); Text(file.map { timeText(Date(timeIntervalSince1970: $0.mtime)) } ?? "—") }
+                GridRow { Text("Last known size").foregroundStyle(.secondary); Text(file.map { bytes($0.size) } ?? "Unavailable") }
+                GridRow { Text("Allocated space").foregroundStyle(.secondary); Text(file.map { bytes($0.alloc) } ?? "Unavailable") }
+                GridRow { Text("Last seen").foregroundStyle(.secondary); Text(file.map { timeText(Date(timeIntervalSince1970: $0.seenAt)) } ?? "—") }
+                GridRow { Text("Modified (for reference only)").foregroundStyle(.secondary); Text(file.map { timeText(Date(timeIntervalSince1970: $0.mtime)) } ?? "—") }
                 if let f = file, f.nlink > 1 {
-                    GridRow { Text("硬链接").foregroundStyle(.secondary); Text("\(f.nlink) 个路径共享同一份数据，汇总中只计一次") }
+                    GridRow { Text("Hard links").foregroundStyle(.secondary); Text("\(f.nlink) paths share the same data; counted once in totals") }
                 }
-                GridRow { Text("状态").foregroundStyle(.secondary); Text(exists ? "存在" : "当前不存在或不可访问，历史记录保留") }
+                GridRow { Text("Status").foregroundStyle(.secondary); Text(exists ? "Exists" : "Missing or inaccessible right now; history is kept") }
             }
             chart.frame(height: 180)
             Table(history.reversed()) {
-                TableColumn("检测时间") { c in Text(timeText(c.ts)) }.width(160)
-                TableColumn("观察区间") { c in Text(c.interval).foregroundStyle(.secondary) }.width(300)
-                TableColumn("大小变化") { c in Text(c.sizeText).monospacedDigit() }.width(170)
-                TableColumn("事件") { c in Text(c.summary).lineLimit(1).help(c.summary) }
+                TableColumn("Detected") { c in Text(timeText(c.ts)) }.width(160)
+                TableColumn("Observed interval") { c in Text(c.interval).foregroundStyle(.secondary) }.width(300)
+                TableColumn("Size change") { c in Text(c.sizeText).monospacedDigit() }.width(170)
+                TableColumn("Event") { c in Text(c.summary).lineLimit(1).help(c.summary) }
             }
             HStack {
-                if !exists { Text("文件当前不存在，无法在 Finder 中显示。").foregroundStyle(.secondary) }
+                if !exists { Text("The file doesn't exist right now, so it can't be shown in Finder.").foregroundStyle(.secondary) }
                 Spacer()
-                Button("在 Finder 中显示") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) }.disabled(!exists)
-                Button("关闭") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) }.disabled(!exists)
+                Button("Close") { dismiss() }.keyboardShortcut(.cancelAction)
             }
         }
         .padding(20)
@@ -438,11 +438,11 @@ struct FileDetailView: View {
     private var chart: some View {
         Chart {
             ForEach(gaps, id: \.start) { g in
-                RectangleMark(xStart: .value("开始", g.start), xEnd: .value("结束", g.end)).foregroundStyle(.gray.opacity(0.2))
+                RectangleMark(xStart: .value("Start", g.start), xEnd: .value("End", g.end)).foregroundStyle(.gray.opacity(0.2))
             }
             ForEach(points) { p in
-                LineMark(x: .value("时间", p.t), y: .value("大小", p.v)).interpolationMethod(.stepEnd)
-                PointMark(x: .value("时间", p.t), y: .value("大小", p.v)).symbolSize(20)
+                LineMark(x: .value("Time", p.t), y: .value("Size", p.v)).interpolationMethod(.stepEnd)
+                PointMark(x: .value("Time", p.t), y: .value("Size", p.v)).symbolSize(20)
             }
         }
         .chartYAxis {
@@ -452,7 +452,7 @@ struct FileDetailView: View {
             }
         }
         .overlay(alignment: .topTrailing) {
-            if !gaps.isEmpty { Text("灰色区域为未监控时段").font(.caption).foregroundStyle(.secondary) }
+            if !gaps.isEmpty { Text("Gray areas are unmonitored periods").font(.caption).foregroundStyle(.secondary) }
         }
     }
 }
@@ -470,41 +470,41 @@ struct SettingsView: View {
     var body: some View {
         let s = engine.status
         Form {
-            Section("监控范围：整个磁盘") {
+            Section("Monitored scope: entire disk") {
                 ForEach(s.roots) { RootRow(root: $0) }
                 HStack {
-                    Text("受保护目录（邮件、信息等）需要授予完整磁盘访问权限，未授权的位置不会显示变化。").font(.caption).foregroundStyle(.secondary)
+                    Text("Protected folders (Mail, Messages, etc.) need Full Disk Access; changes in locations without access are not shown.").font(.caption).foregroundStyle(.secondary)
                     Spacer()
-                    Button("打开完整磁盘访问权限设置") {
+                    Button("Open Full Disk Access Settings") {
                         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
                     }
                 }
             }
-            Section("统计") {
-                Toggle("忽略虚拟内存交换", isOn: $engine.ignoreSwap)
-                Text("概览、排行和菜单栏统计不计入系统交换文件（swapfile）的变化；原始记录仍保留，磁盘可用空间仍显示实际值。")
+            Section("Statistics") {
+                Toggle("Ignore swap", isOn: $engine.ignoreSwap)
+                Text("Overview, Ranking, and menu bar stats leave out changes to system swap files (swapfile). The raw log still keeps them, and free disk space still shows the actual value.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section("数据") {
-                Stepper("历史保留期限：\(retention) 天", value: $retention, in: 1...30)
-                Stepper("容量预算：\(budget) MiB", value: $budget, in: 100...10_000, step: 100)
-                LabeledContent("本 App 数据占用（数据库及日志）", value: bytes(s.dataBytes))
-                LabeledContent("最早可查询时间", value: s.earliest.map(timeText) ?? "暂无历史")
-                Button("清除本 App 历史…", role: .destructive) { confirmClear = true }
+            Section("Data") {
+                Stepper("Keep history for \(retention) days", value: $retention, in: 1...30)
+                Stepper("Size budget: \(budget) MiB", value: $budget, in: 100...10_000, step: 100)
+                LabeledContent("App data usage (database and logs)", value: bytes(s.dataBytes))
+                LabeledContent("Earliest available", value: s.earliest.map(timeText) ?? "No history yet")
+                Button("Clear App History…", role: .destructive) { confirmClear = true }
             }
-            Section("后台") {
-                Toggle("登录时启动", isOn: Binding(get: { loginEnabled }, set: setLogin))
+            Section("Background") {
+                Toggle("Launch at login", isOn: Binding(get: { loginEnabled }, set: setLogin))
                 if let loginError { Text(loginError).font(.caption).foregroundStyle(.red) }
-                Text("关闭窗口后继续在菜单栏后台监控；退出应用即停止监控，停止期间在历史中显示为缺口。").font(.caption).foregroundStyle(.secondary)
+                Text("Monitoring continues from the menu bar after the window is closed. Quitting the app stops monitoring, and the stopped period shows as a gap in history.").font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
         .onChange(of: retention) { engine.maintainNow() }
         .onChange(of: budget) { engine.maintainNow() }
-        .confirmationDialog("清除全部变化历史？", isPresented: $confirmClear) {
-            Button("清除历史", role: .destructive) { engine.clearHistory() }
+        .confirmationDialog("Clear all change history?", isPresented: $confirmClear) {
+            Button("Clear History", role: .destructive) { engine.clearHistory() }
         } message: {
-            Text("将删除本 App 记录的全部变化历史与覆盖区间，无法恢复。当前基线、监控设置以及被监控的文件本身都不受影响。")
+            Text("This deletes all change history and coverage periods recorded by the app, and can't be undone. The current baseline, monitoring settings, and the monitored files themselves are not affected.")
         }
     }
 
@@ -513,7 +513,7 @@ struct SettingsView: View {
             if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
             loginError = nil
         } catch {
-            loginError = "无法更改登录启动：\(error.localizedDescription)（需以 .app 形式运行）"
+            loginError = "Couldn't change launch at login: \(error.localizedDescription) (the app must run as a .app bundle)"
         }
         loginEnabled = SMAppService.mainApp.status == .enabled
     }
@@ -534,19 +534,19 @@ struct RootRow: View {
             }
             ForEach(root.excludes, id: \.self) { ex in
                 HStack {
-                    Text("排除：\(ex)").font(.caption)
+                    Text("Excluded: \(ex)").font(.caption)
                     Button { engine.setExcludes(root.id, root.excludes.filter { $0 != ex }) } label: { Image(systemName: "minus.circle") }
                         .buttonStyle(.borderless)
                 }
             }
-            Button("添加排除目录（如缓存等高频写入位置）…") {
-                if let p = pickFolder(start: root.path, message: "选择要排除的子目录"), p != root.path, isUnder(p, root.path) {
+            Button("Add Excluded Folder (e.g. caches and other high-churn locations)…") {
+                if let p = pickFolder(start: root.path, message: "Choose a subfolder to exclude"), p != root.path, isUnder(p, root.path) {
                     engine.setExcludes(root.id, root.excludes + [p])
                 }
             }
             .buttonStyle(.link).font(.caption)
             if !state.unreadable.isEmpty {
-                DisclosureGroup("因权限无法读取、变化未计入的位置（\(state.unreadable.count)\(state.unreadable.count >= 200 ? "+" : "")）") {
+                DisclosureGroup("Unreadable locations, changes not counted (\(state.unreadable.count)\(state.unreadable.count >= 200 ? "+" : ""))") {
                     ForEach(state.unreadable, id: \.self) { Text($0).font(.caption).textSelection(.enabled) }
                 }
                 .font(.caption)

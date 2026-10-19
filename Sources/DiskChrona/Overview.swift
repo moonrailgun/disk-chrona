@@ -14,7 +14,7 @@ extension Color {
 }
 
 enum Palette {
-    /// Fixed order; assigned by hotspot rank and never cycled (more than five places fold into "其他位置").
+    /// Fixed order; assigned by hotspot rank and never cycled (more than five places fold into "Other locations").
     static let series = [
         Color(light: 0x2a78d6, dark: 0x3987e5), Color(light: 0xeb6834, dark: 0xd95926), Color(light: 0x1baf7a, dark: 0x199e70),
         Color(light: 0xeda100, dark: 0xc98500), Color(light: 0xe87ba4, dark: 0xd55181),
@@ -37,7 +37,7 @@ func shortPath(_ p: String) -> String {
     return parts.count > 3 ? "…/" + parts.suffix(2).joined(separator: "/") : displayPath(p)
 }
 
-func placeName(_ p: String) -> String { p == "/" ? "整个磁盘" : fileName(p) }
+func placeName(_ p: String) -> String { p == "/" ? "Entire disk" : fileName(p) }
 
 /// Where a path sits, as "owner › rest": "Dao › extensions_crx_cache", "kindle-dashboard › …/kolinux/lib".
 func placeParent(_ p: String) -> String { context(of: (p as NSString).deletingLastPathComponent) }
@@ -65,13 +65,13 @@ func realPath(_ display: String) -> String { display.hasPrefix("~") ? NSHomeDire
 /// Undo URL-encoding that some apps use for folder names; an embedded path is quoted so it does not read as nesting.
 func readable(_ name: String) -> String {
     guard name.contains("%"), let decoded = name.removingPercentEncoding else { return name }
-    return decoded.contains("/") ? "「" + displayPath(decoded).replacingOccurrences(of: NSHomeDirectory(), with: "~") + "」" : decoded
+    return decoded.contains("/") ? "“" + displayPath(decoded).replacingOccurrences(of: NSHomeDirectory(), with: "~") + "”" : decoded
 }
 
 func ownerName(_ own: String) -> String {
-    if own == "~" { return "主目录" }
-    if own == "/" || own.isEmpty { return "磁盘" }
-    if own.hasPrefix("/private/var/folders/") && own.split(separator: "/").count <= 6 { return "系统临时目录" }
+    if own == "~" { return "Home" }
+    if own == "/" || own.isEmpty { return "Disk" }
+    if own.hasPrefix("/private/var/folders/") && own.split(separator: "/").count <= 6 { return "System temp folder" }
     let parent = fileName((own as NSString).deletingLastPathComponent)
     // A tool's hidden folder names the owner better than its subfolder: ".claude/projects", not "projects".
     return parent.hasPrefix(".") ? parent + "/" + readable(fileName(own)) : readable(fileName(own))
@@ -103,31 +103,31 @@ func locationTag(_ p: String) -> String? {
     if let vm = ["/System/Volumes/VM", "/private/var/vm"].first(where: { isUnder(path, $0) }) {
         if (path as NSString).deletingLastPathComponent == vm {
             let name = fileName(path)
-            if name == "sleepimage" { return "休眠镜像" }
-            if isSwapFile(path) { return "虚拟内存交换" }
+            if name == "sleepimage" { return "Sleep image" }
+            if isSwapFile(path) { return "Swap" }
         }
-        return "虚拟内存"
+        return "Virtual memory"
     }
     var volumePath = path
     let parts = path.split(separator: "/")
     if parts.first == "Volumes", parts.count >= 2 { volumePath = "/" + parts.dropFirst(2).joined(separator: "/") }
-    if isUnder(volumePath, "/.Spotlight-V100") { return "搜索索引" }
-    if isUnder(volumePath, "/.fseventsd") { return "文件变更日志" }
+    if isUnder(volumePath, "/.Spotlight-V100") { return "Search index" }
+    if isUnder(volumePath, "/.fseventsd") { return "FSEvents log" }
     let systemRules = [
-        ("/private/var/db/diagnostics", "系统日志"), ("/private/var/db/uuidtext", "系统日志"),
-        ("/Library/Logs/DiagnosticReports", "诊断报告"),
-        (NSHomeDirectory() + "/Library/Logs/DiagnosticReports", "诊断报告"),
-        ("/Library/Updates", "系统更新"),
+        ("/private/var/db/diagnostics", "System logs"), ("/private/var/db/uuidtext", "System logs"),
+        ("/Library/Logs/DiagnosticReports", "Diagnostic reports"),
+        (NSHomeDirectory() + "/Library/Logs/DiagnosticReports", "Diagnostic reports"),
+        ("/Library/Updates", "System updates"),
     ]
     if let rule = systemRules.first(where: { isUnder(path, $0.0) }) { return rule.1 }
     let d = displayPath(path) + "/"
     let rules: [(String, String)] = [
-        ("~/.Trash/", "废纸篓"), ("~/Downloads/", "下载"), ("/Caches/", "缓存"), ("/private/var/folders/", "临时文件"),
-        ("/private/tmp/", "临时文件"), ("/private/var/db/", "系统数据"), ("/Logs/", "日志"), ("/private/var/log/", "日志"), ("/DerivedData/", "构建产物"),
-        ("/node_modules/", "依赖包"), ("/.build/", "构建产物"), ("/CoreSimulator/", "模拟器"), ("/.git/", "Git"),
-        ("~/Library/Containers/", "应用数据"), ("~/Library/Group Containers/", "应用数据"), ("~/Library/Application Support/", "应用数据"),
-        ("~/Movies/", "媒体"), ("~/Pictures/", "媒体"), ("~/Music/", "媒体"), ("~/Documents/", "文稿"), ("~/Desktop/", "桌面"),
-        ("/Applications/", "应用程序"),
+        ("~/.Trash/", "Trash"), ("~/Downloads/", "Downloads"), ("/Caches/", "Caches"), ("/private/var/folders/", "Temp files"),
+        ("/private/tmp/", "Temp files"), ("/private/var/db/", "System data"), ("/Logs/", "Logs"), ("/private/var/log/", "Logs"), ("/DerivedData/", "Build output"),
+        ("/node_modules/", "Dependencies"), ("/.build/", "Build output"), ("/CoreSimulator/", "Simulator"), ("/.git/", "Git"),
+        ("~/Library/Containers/", "App data"), ("~/Library/Group Containers/", "App data"), ("~/Library/Application Support/", "App data"),
+        ("~/Movies/", "Media"), ("~/Pictures/", "Media"), ("~/Music/", "Media"), ("~/Documents/", "Documents"), ("~/Desktop/", "Desktop"),
+        ("/Applications/", "Applications"),
     ]
     return rules.first { $0.0.hasPrefix("~") ? d.hasPrefix($0.0) : d.contains($0.0) }?.1
 }
@@ -142,7 +142,7 @@ struct Hotspot: Identifiable, Equatable {
 }
 
 /// Where growth concentrates: directories holding at least 4% of all growth, each reported without the growth of
-/// more specific listed subdirectories, so the values never overlap and add up with "其他位置" to the total.
+/// more specific listed subdirectories, so the values never overlap and add up with "Other locations" to the total.
 func hotspots(_ perFile: [String: Int64], limit: Int = 5) -> (spots: [Hotspot], total: Int64) {
     var dirs: [String: (net: Int64, files: Int)] = [:]
     var total: Int64 = 0
@@ -172,7 +172,7 @@ func hotspots(_ perFile: [String: Int64], limit: Int = 5) -> (spots: [Hotspot], 
 // MARK: - Data
 
 struct Overview {
-    static let otherKey = "其他位置", releaseKey = "释放"
+    static let otherKey = "Other locations", releaseKey = "Freed"
 
     struct Bar: Identifiable { let id: Int; let start: Date; let series: String; let value: Double }
     struct TopFile: Identifiable { var id: String { path }; let path: String; let net: Int64; let size: Int64? }
@@ -330,28 +330,28 @@ struct FreeSpaceChart: View {
         let selected = hover.flatMap { data.freePoint(near: $0) }
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("卷可用空间")
+                Text("Volume free space")
                 Spacer(minLength: 8)
                 if let selected {
-                    Text("\(selected.t.formatted(.dateTime.month().day().hour().minute())) · 平均 \(bytes(Int64(selected.free)))")
+                    Text("\(selected.t.formatted(.dateTime.month().day().hour().minute())) · avg \(bytes(Int64(selected.free)))")
                         .foregroundStyle(.primary).monospacedDigit()
                 }
             }
             .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             Chart {
                 ForEach(gaps, id: \.start) { g in
-                    RectangleMark(xStart: .value("开始", max(g.start, domain.lowerBound)), xEnd: .value("结束", min(g.end, domain.upperBound)))
+                    RectangleMark(xStart: .value("Start", max(g.start, domain.lowerBound)), xEnd: .value("End", min(g.end, domain.upperBound)))
                         .foregroundStyle(Palette.gap)
                 }
                 ForEach(data.free) { p in
-                    LineMark(x: .value("时间", p.t), y: .value("可用空间", p.free))
+                    LineMark(x: .value("Time", p.t), y: .value("Free space", p.free))
                         .foregroundStyle(Palette.series[0]).lineStyle(StrokeStyle(lineWidth: 2))
                 }
                 if let selected {
-                    RuleMark(x: .value("时间", selected.t))
+                    RuleMark(x: .value("Time", selected.t))
                         .foregroundStyle(Color.secondary.opacity(0.5))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                    PointMark(x: .value("时间", selected.t), y: .value("可用空间", selected.free))
+                    PointMark(x: .value("Time", selected.t), y: .value("Free space", selected.free))
                         .foregroundStyle(Palette.series[0]).symbolSize(40)
                 }
             }
@@ -364,7 +364,7 @@ struct FreeSpaceChart: View {
             .frame(height: 74)
             .overlay {
                 if data.free.count < 2 && selected == nil {
-                    Text("每分钟采样一次，稍后显示趋势").font(.caption).foregroundStyle(.secondary)
+                    Text("Sampled once a minute; the trend appears shortly").font(.caption).foregroundStyle(.secondary)
                         .allowsHitTesting(false)
                 }
             }
@@ -388,22 +388,22 @@ struct OverviewView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(headline).font(.title3.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 12) {
-                    StatTile(label: "卷可用空间", value: engine.status.volumeFree.map(bytes) ?? "不可用",
-                             caption: data.freeDelta.map { "所选范围内 \(signed($0))" } ?? "采样不足，暂无法比较")
-                        .help("不含系统可清除空间，可能小于 Finder 显示的数值")
-                    StatTile(label: "文件净增长", value: signed(data.net), caption: "增长 \(bytes(data.growth)) · 释放 \(bytes(-data.release))")
-                    StatTile(label: "当前写入速度", value: "\(bytes(live.rate))/分钟", caption: "最近 1 分钟观察到的增长")
-                    StatTile(label: "活跃文件", value: data.active.formatted(), caption: "新增 \(data.added) · 删除 \(data.deleted)")
+                    StatTile(label: "Volume free space", value: engine.status.volumeFree.map(bytes) ?? "Unavailable",
+                             caption: data.freeDelta.map { "\(signed($0)) in selected range" } ?? "Not enough samples to compare yet")
+                        .help("Excludes purgeable space, so it may be lower than Finder shows")
+                    StatTile(label: "Net file growth", value: signed(data.net), caption: "Grew \(bytes(data.growth)) · Freed \(bytes(-data.release))")
+                    StatTile(label: "Current write rate", value: "\(bytes(live.rate))/min", caption: "Growth observed in the last minute")
+                    StatTile(label: "Active files", value: data.active.formatted(), caption: "\(data.added) added · \(data.deleted) deleted")
                 }
                 // The hotspot list sits beside the chart: it is the chart's legend and its table view.
                 HStack(alignment: .top, spacing: 12) {
-                    Card(title: "空间变化", note: range.span.rawValue) { trend }
-                    Card(title: "增长在哪里", note: "点击查看目录") { spotList }.frame(width: 340)
+                    Card(title: "Space changes", note: range.span.rawValue) { trend }
+                    Card(title: "Where it grew", note: "Click to browse") { spotList }.frame(width: 340)
                 }
                 .zIndex(1)
                 HStack(alignment: .top, spacing: 12) {
-                    Card(title: "正在写入", note: "最近 2 分钟 · 按所属位置") { liveList }
-                    Card(title: "增长最多的文件", note: "点击查看历史") { fileList }
+                    Card(title: "Being written", note: "Last 2 minutes · by location") { liveList }
+                    Card(title: "Top growing files", note: "Click for history") { fileList }
                 }
             }
             .padding(8)
@@ -425,25 +425,25 @@ struct OverviewView: View {
     }
 
     private var headline: String {
-        var s = (range.span == .custom ? "所选时间段内" : range.span.rawValue) + "，"
+        var s = (range.span == .custom ? "In the selected period" : range.span.rawValue) + ", "
         if let d = data.freeDelta {
-            let since = data.freeCovers ? "" : "自 \(data.freeSince!.formatted(date: .omitted, time: .shortened)) 起"
-            s += "可用空间" + since + (d < 0 ? "减少 \(bytes(-d))；" : d > 0 ? "增加 \(bytes(d))；" : "基本不变；")
+            let since = data.freeCovers ? "" : " since \(data.freeSince!.formatted(date: .omitted, time: .shortened))"
+            s += "free space" + since + (d < 0 ? " dropped by \(bytes(-d)); " : d > 0 ? " grew by \(bytes(d)); " : " barely changed; ")
         }
-        guard data.net != 0 else { return s + "没有观察到文件大小的净变化。" }
-        if data.net < 0 { return s + "文件净减少 \(bytes(-data.net))。" }
-        s += "观察到文件净增长 \(bytes(data.net))"
+        guard data.net != 0 else { return s + "no net file size change was observed." }
+        if data.net < 0 { return s + "files shrank by \(bytes(-data.net)) net." }
+        s += "files grew by \(bytes(data.net)) net"
         // Only compare like with like: the same time span, and growth on the volume whose free space we sample.
         if data.freeCovers, let d = data.freeDelta, d < 0, data.localNet > 0, data.localNet * 100 / -d < 100 {
             let share = data.localNet * 100 / -d
-            s += "（本机卷上的增长约占减少量的 \(share)%" + (share < 50 ? "，其余可能来自快照、系统或未授权的位置）" : "）")
+            s += " (growth on this volume accounts for about \(share)% of the drop" + (share < 50 ? "; the rest may come from snapshots, the system, or locations without access)" : ")")
         }
         if let top = data.spots.first {
             let share = top.net * 100 / max(data.total, 1)
-            s += share >= 50 ? "，主要在 \(shortPath(top.path))（\(signed(top.net))）"
-                : "，增长较分散；最多的是 \(shortPath(top.path))（\(signed(top.net))，占 \(share)%）"
+            s += share >= 50 ? ", mostly in \(shortPath(top.path)) (\(signed(top.net)))"
+                : ", spread out; the largest is \(shortPath(top.path)) (\(signed(top.net)), \(share)%)"
         }
-        return s + "。"
+        return s + "."
     }
 
     private var domain: ClosedRange<Date> { data.interval.start...max(data.interval.end, data.interval.start + 60) }
@@ -454,24 +454,24 @@ struct OverviewView: View {
         VStack(alignment: .leading, spacing: 6) {
             FreeSpaceChart(data: data, gaps: gaps)
 
-            Text("文件大小变化：增长按位置堆叠，释放画在零线以下").font(.caption).foregroundStyle(.secondary).padding(.top, 6)
+            Text("File size changes: growth is stacked by location, freed space is drawn below zero").font(.caption).foregroundStyle(.secondary).padding(.top, 6)
             Chart {
                 ForEach(gaps, id: \.start) { g in
-                    RectangleMark(xStart: .value("开始", max(g.start, domain.lowerBound)), xEnd: .value("结束", min(g.end, domain.upperBound)))
+                    RectangleMark(xStart: .value("Start", max(g.start, domain.lowerBound)), xEnd: .value("End", min(g.end, domain.upperBound)))
                         .foregroundStyle(Palette.gap)
                 }
                 if let b = hoverBucket {
-                    RectangleMark(x: .value("时间", b, unit: data.unit)).foregroundStyle(Color.primary.opacity(0.06))
+                    RectangleMark(x: .value("Time", b, unit: data.unit)).foregroundStyle(Color.primary.opacity(0.06))
                         .annotation(position: .top, spacing: 6, overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
                             tooltip(b)
                         }
                 }
                 ForEach(data.bars) { bar in
-                    BarMark(x: .value("时间", bar.start, unit: data.unit), y: .value("变化", bar.value))
-                        .foregroundStyle(by: .value("位置", bar.series))
+                    BarMark(x: .value("Time", bar.start, unit: data.unit), y: .value("Change", bar.value))
+                        .foregroundStyle(by: .value("Location", bar.series))
                         .cornerRadius(2)
                 }
-                RuleMark(y: .value("零", 0)).foregroundStyle(Color.secondary.opacity(0.5)).lineStyle(StrokeStyle(lineWidth: 1))
+                RuleMark(y: .value("Zero", 0)).foregroundStyle(Color.secondary.opacity(0.5)).lineStyle(StrokeStyle(lineWidth: 1))
             }
             .chartForegroundStyleScale(domain: data.keys, range: data.keys.map(data.color))
             .chartLegend(.hidden)
@@ -482,7 +482,7 @@ struct OverviewView: View {
             .frame(height: 180)
             .overlay {
                 if data.bars.isEmpty && hoverBucket == nil {
-                    Text("所选范围内没有观察到文件大小变化").font(.callout).foregroundStyle(.secondary)
+                    Text("No file size changes observed in the selected range").font(.callout).foregroundStyle(.secondary)
                         .allowsHitTesting(false)
                 }
             }
@@ -501,7 +501,7 @@ struct OverviewView: View {
             if !gaps.isEmpty {
                 HStack(spacing: 5) {
                     RoundedRectangle(cornerRadius: 2).fill(Palette.gap).frame(width: 9, height: 9)
-                    Text("灰色区域为未监控时段，其间的变化无法定位到具体时刻").font(.caption).foregroundStyle(.secondary)
+                    Text("Gray areas are unmonitored periods; changes during them can't be pinned to a specific time").font(.caption).foregroundStyle(.secondary)
                 }
             }
         }
@@ -522,10 +522,10 @@ struct OverviewView: View {
             Text(label).fontWeight(.semibold)
             if !inBucket.isEmpty || !hasGap {
                 HStack(spacing: 12) {
-                    Text("增长 \(bytes(Int64(grew)))")
-                    Text("释放 \(bytes(Int64(-freed)))")
+                    Text("Grew \(bytes(Int64(grew)))")
+                    Text("Freed \(bytes(Int64(-freed)))")
                 }
-                Text("净变化 \(signed(Int64(grew + freed)))").foregroundStyle(.secondary)
+                Text("Net change \(signed(Int64(grew + freed)))").foregroundStyle(.secondary)
             }
             if !inBucket.isEmpty {
                 Divider()
@@ -539,11 +539,11 @@ struct OverviewView: View {
                     }
                 }
             } else {
-                Text(hasGap ? "此时段没有记录，无法确认是否有变化" : "此时段未观察到文件大小变化")
+                Text(hasGap ? "No records for this period, so changes can't be confirmed" : "No file size changes observed in this period")
                     .foregroundStyle(.secondary)
             }
             if hasGap {
-                Text("含未监控时段，变化按恢复后的检测时间记录")
+                Text("Includes unmonitored time; changes are recorded when detected after monitoring resumed")
                     .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -559,7 +559,7 @@ struct OverviewView: View {
     private var liveList: some View {
         VStack(alignment: .leading, spacing: 0) {
             if live.groups.isEmpty {
-                Text("最近 2 分钟没有观察到写入").font(.callout).foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 120)
+                Text("No writes observed in the last 2 minutes").font(.callout).foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 120)
             }
             ForEach(live.groups) { g in
                 Button { browse(g.owner) } label: {
@@ -572,12 +572,12 @@ struct OverviewView: View {
                                 Text(ownerName(displayPath(g.owner))).fontWeight(.medium).lineLimit(1).truncationMode(.middle)
                                 if let tag = locationTag(g.owner) { TagView(text: tag) }
                             }
-                            Text("\(g.files) 个文件 · 最近 \(readable(fileName(g.latest)))").font(.caption).foregroundStyle(.secondary)
+                            Text("\(g.files) files · latest \(readable(fileName(g.latest)))").font(.caption).foregroundStyle(.secondary)
                                 .lineLimit(1).truncationMode(.middle)
                         }
                         Spacer(minLength: 4)
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text(g.growth > 0 ? "+" + bytes(g.growth) : g.net < 0 ? signed(g.net) : "大小未变").font(.callout.weight(.medium))
+                            Text(g.growth > 0 ? "+" + bytes(g.growth) : g.net < 0 ? signed(g.net) : "Size unchanged").font(.callout.weight(.medium))
                                 .foregroundStyle(g.growth > 0 ? .primary : .secondary)
                             Text(g.last.formatted(.relative(presentation: .named))).font(.caption).foregroundStyle(.secondary)
                         }
@@ -586,10 +586,10 @@ struct OverviewView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("\(g.owner)\n最近写入：\(g.latest)")
+                .help("\(g.owner)\nLatest write: \(g.latest)")
             }
             if live.more > 0 {
-                Text("另有 \(live.more) 个位置有写入").font(.caption).foregroundStyle(.secondary).padding(.top, 4)
+                Text("\(live.more) more locations with writes").font(.caption).foregroundStyle(.secondary).padding(.top, 4)
             }
         }
     }
@@ -597,20 +597,20 @@ struct OverviewView: View {
     private var spotList: some View {
         VStack(alignment: .leading, spacing: 0) {
             if data.spots.isEmpty {
-                Text("所选范围内没有观察到增长").font(.callout).foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 100)
+                Text("No growth observed in the selected range").font(.callout).foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 100)
             }
             ForEach(Array(data.spots.enumerated()), id: \.element.id) { i, spot in
                 Button { browse(spot.path) } label: {
-                    PlaceRow(color: Palette.series[i], title: readable(placeName(spot.path)) + (spot.rest ? "（其余）" : ""),
+                    PlaceRow(color: Palette.series[i], title: readable(placeName(spot.path)) + (spot.rest ? " (rest)" : ""),
                              subtitle: placeParent(spot.path), tag: locationTag(spot.path),
                              share: Double(spot.net) / Double(max(data.total, 1)),
-                             value: signed(spot.net), detail: "\(spot.files) 个文件")
+                             value: signed(spot.net), detail: "\(spot.files) files")
                 }
                 .buttonStyle(.plain)
-                .help(spot.rest ? "\(spot.path) 中未单独列出的部分" : spot.path)
+                .help(spot.rest ? "The part of \(spot.path) not listed separately" : spot.path)
             }
             if data.other > 0 && !data.spots.isEmpty {
-                PlaceRow(color: Palette.other, title: Overview.otherKey, subtitle: "增长较分散的其余位置", tag: nil,
+                PlaceRow(color: Palette.other, title: Overview.otherKey, subtitle: "Other locations with scattered growth", tag: nil,
                          share: Double(data.other) / Double(max(data.total, 1)), value: signed(data.other), detail: "")
             }
         }
@@ -619,7 +619,7 @@ struct OverviewView: View {
     private var fileList: some View {
         VStack(alignment: .leading, spacing: 0) {
             if data.files.isEmpty {
-                Text("所选范围内没有文件变大").font(.callout).foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 100)
+                Text("No files grew in the selected range").font(.callout).foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 100)
             }
             ForEach(data.files) { f in
                 Button { openFile(f.path) } label: {
@@ -635,7 +635,7 @@ struct OverviewView: View {
                         Spacer(minLength: 4)
                         VStack(alignment: .trailing, spacing: 1) {
                             Text(signed(f.net)).font(.callout.weight(.semibold))
-                            Text(f.size.map { "现为 \(bytes($0))" } ?? "已不存在").font(.caption).foregroundStyle(.secondary)
+                            Text(f.size.map { "now \(bytes($0))" } ?? "No longer exists").font(.caption).foregroundStyle(.secondary)
                         }
                     }
                     .padding(.vertical, 6)
@@ -701,14 +701,14 @@ struct TagView: View {
 
     private var explanation: String {
         switch text {
-        case "虚拟内存交换": "macOS 将暂时不用的内存数据存到磁盘，交换文件由系统按需管理。"
-        case "虚拟内存": "macOS 保存内存交换文件和休眠数据的位置。"
-        case "休眠镜像": "保存休眠时的内存状态，供系统恢复使用。"
-        case "搜索索引": "Spotlight 为快速搜索文件而维护的索引数据。"
-        case "文件变更日志": "FSEvents 保存的文件系统变更记录，供系统和应用追踪目录变化。"
-        case "系统日志": "macOS 统一日志及其辅助数据，用于记录和诊断系统与应用运行情况。"
-        case "诊断报告": "系统或应用产生的崩溃、卡顿等诊断报告。"
-        case "系统更新": "macOS 软件更新下载或准备安装的数据。"
+        case "Swap": "macOS moves memory that isn't in use to disk; the system manages swap files as needed."
+        case "Virtual memory": "Where macOS keeps swap files and hibernation data."
+        case "Sleep image": "Holds memory contents during hibernation so the system can restore them."
+        case "Search index": "Index data Spotlight maintains for fast file search."
+        case "FSEvents log": "File system change records kept by FSEvents, used by the system and apps to track folder changes."
+        case "System logs": "macOS unified logs and their supporting data, used to record and diagnose system and app activity."
+        case "Diagnostic reports": "Crash, hang, and other diagnostic reports from the system or apps."
+        case "System updates": "macOS software update downloads and data staged for installation."
         default: text
         }
     }

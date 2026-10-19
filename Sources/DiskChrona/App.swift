@@ -30,7 +30,7 @@ struct MenuLabel: View {
     var body: some View {
         if let image = MenuRateLabel(rate: engine.rate).image {
             Image(nsImage: image).renderingMode(.template)
-                .accessibilityLabel("DiskChrona，\(engine.status.summary)，\(signed(engine.rate))/分钟")
+                .accessibilityLabel("DiskChrona, \(engine.status.summary), \(signed(engine.rate))/min")
         }
     }
 }
@@ -90,10 +90,10 @@ struct MenuContent: View {
             }
             HStack(alignment: .firstTextBaseline) {
                 Text(signed(engine.rate)).font(.title2.weight(.semibold)).monospacedDigit()
-                Text("/ 分钟").font(.caption).foregroundStyle(.secondary)
+                Text("/ min").font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 if let free = engine.status.volumeFree {
-                    Text("可用 \(bytes(free))").font(.caption).foregroundStyle(.secondary)
+                    Text("\(bytes(free)) free").font(.caption).foregroundStyle(.secondary)
                 }
             }
             if let data {
@@ -101,19 +101,19 @@ struct MenuContent: View {
                 Divider()
                 MenuTopFiles(files: data.files)
             } else {
-                Text(failed ? "暂时无法读取历史数据" : "正在读取历史数据…")
+                Text(failed ? "Couldn't read history right now" : "Loading history…")
                     .font(.caption).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 180)
             }
             Divider()
             HStack {
-                Button("打开主窗口") {
+                Button("Open Main Window") {
                     openWindow(id: "main")
                     NSApp.activate()
                 }
                 Spacer()
-                Button(engine.status.paused ? "恢复监控" : "暂停监控") { engine.setPaused(!engine.status.paused) }
-                Button("退出") { NSApp.terminate(nil) }.keyboardShortcut("q")
+                Button(engine.status.paused ? "Resume Monitoring" : "Pause Monitoring") { engine.setPaused(!engine.status.paused) }
+                Button("Quit") { NSApp.terminate(nil) }.keyboardShortcut("q")
             }
             .controlSize(.small)
         }
@@ -143,9 +143,9 @@ struct MenuTopFiles: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("净增长最多的文件 · Top 3").font(.caption).foregroundStyle(.secondary)
+            Text("Top 3 files by net growth").font(.caption).foregroundStyle(.secondary)
             if files.isEmpty {
-                Text("最近 1 小时没有文件变大").font(.caption).foregroundStyle(.secondary)
+                Text("No files grew in the last hour").font(.caption).foregroundStyle(.secondary)
             }
             ForEach(files.prefix(3)) { file in
                 HStack(spacing: 8) {
@@ -199,24 +199,24 @@ struct MenuTrend: View {
         let selected = selection
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("最近 1 小时 · 文件变化")
+                Text("Last hour · file changes")
                 Spacer()
-                Text("净增长 \(signed(data.net))")
+                Text("Net growth \(signed(data.net))")
             }
             .font(.caption).foregroundStyle(.secondary)
             Chart {
                 ForEach(gaps, id: \.start) { gap in
-                    RectangleMark(xStart: .value("开始", gap.start), xEnd: .value("结束", gap.end))
+                    RectangleMark(xStart: .value("Start", gap.start), xEnd: .value("End", gap.end))
                         .foregroundStyle(Palette.gap)
                 }
                 ForEach(data.bars) { bar in
-                    BarMark(x: .value("时间", bar.start, unit: .minute), y: .value("变化", bar.value))
+                    BarMark(x: .value("Time", bar.start, unit: .minute), y: .value("Change", bar.value))
                         .foregroundStyle(bar.value >= 0 ? Palette.series[0] : Palette.series[2])
                         .opacity(selected == nil || bar.start == selected?.interval.start ? 1 : 0.35)
                 }
-                RuleMark(y: .value("零", 0)).foregroundStyle(Color.secondary.opacity(0.4))
+                RuleMark(y: .value("Zero", 0)).foregroundStyle(Color.secondary.opacity(0.4))
                 if let selected {
-                    RectangleMark(x: .value("时间", selected.interval.start, unit: .minute))
+                    RectangleMark(x: .value("Time", selected.interval.start, unit: .minute))
                         .foregroundStyle(Color.primary.opacity(0.12))
                 }
             }
@@ -240,17 +240,17 @@ struct MenuTrend: View {
             }
             .overlay {
                 if data.bars.isEmpty && selected == nil {
-                    Text("暂无文件大小变化").font(.caption).foregroundStyle(.secondary)
+                    Text("No file size changes yet").font(.caption).foregroundStyle(.secondary)
                         .allowsHitTesting(false)
                 }
             }
             HStack(spacing: 12) {
-                Label("增长 \(bytes(data.growth))", systemImage: "arrow.up").foregroundStyle(Palette.series[0])
-                Label("释放 \(bytes(-data.release))", systemImage: "arrow.down").foregroundStyle(Palette.series[2])
+                Label("Grew \(bytes(data.growth))", systemImage: "arrow.up").foregroundStyle(Palette.series[0])
+                Label("Freed \(bytes(-data.release))", systemImage: "arrow.down").foregroundStyle(Palette.series[2])
             }
             .font(.caption)
             if !gaps.isEmpty {
-                Text("灰色区域为未监控时段").font(.caption2).foregroundStyle(.secondary)
+                Text("Gray areas are unmonitored periods").font(.caption2).foregroundStyle(.secondary)
             }
         }
     }
@@ -262,15 +262,15 @@ struct MenuTrend: View {
                     .fontWeight(.semibold)
                 Spacer()
                 if bucket.hasGap {
-                    Text("含未监控时段").foregroundStyle(.secondary)
+                    Text("Includes unmonitored time").foregroundStyle(.secondary)
                 }
             }
             HStack {
-                Text("增长\n\(bytes(bucket.growth))").foregroundStyle(Palette.series[0])
+                Text("Grew\n\(bytes(bucket.growth))").foregroundStyle(Palette.series[0])
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text("释放\n\(bytes(bucket.release))").foregroundStyle(Palette.series[2])
+                Text("Freed\n\(bytes(bucket.release))").foregroundStyle(Palette.series[2])
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text("净变化\n\(signed(bucket.net))")
+                Text("Net\n\(signed(bucket.net))")
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }

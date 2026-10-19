@@ -302,7 +302,7 @@ final class EngineTests: XCTestCase {
         XCTAssertEqual(spots.map(\.path), ["/b/dl", "/a/cache/x", "/a/cache/y", "/d/k", "/d"])
         XCTAssertEqual(spots.map { $0.net / mb }, [1000, 600, 300, 200, 90], "/d reports only what /d/k does not explain")
         XCTAssertEqual(spots.last?.rest, true)
-        XCTAssertEqual(total - spots.reduce(0) { $0 + $1.net }, 10 * mb, "the rest is 其他位置")
+        XCTAssertEqual(total - spots.reduce(0) { $0 + $1.net }, 10 * mb, "the rest is Other locations")
         XCTAssertEqual(distinctNames(["/a/x/k", "/b/x/k", "/c/k"]), ["/a/x/k": "a/x/k", "/b/x/k": "b/x/k", "/c/k": "c/k"])
     }
 
@@ -333,10 +333,10 @@ final class EngineTests: XCTestCase {
         XCTAssertEqual(context(of: home + "/Develop/kindle-dashboard/.cache/kolinux/lib"), "kindle-dashboard › …/kolinux/lib")
         XCTAssertEqual(context(of: "/Volumes/Kindle"), "Kindle")
         XCTAssertEqual(context(of: home + "/Library/Application Support/orca/terminal-history/%2FUsers%2Fx%40%40ab"),
-                       "orca › terminal-history/「/Users/x@@ab」")
+                       "orca › terminal-history/“/Users/x@@ab”")
         XCTAssertEqual(owner(ofDir: home + "/Downloads"), "~/Downloads")
         XCTAssertEqual(ownerName(owner(ofDir: home + "/.claude/projects/x")), ".claude/projects")
-        XCTAssertEqual(ownerName(owner(ofDir: "/private/var/folders/0l/abc/T")), "系统临时目录")
+        XCTAssertEqual(ownerName(owner(ofDir: "/private/var/folders/0l/abc/T")), "System temp folder")
     }
 
     func testCoverageGaps() {
