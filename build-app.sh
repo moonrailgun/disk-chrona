@@ -1,8 +1,9 @@
 #!/bin/sh
-# Builds DiskChrona.app into ./build (menu bar agent, ad-hoc signed). Usage: ./build-app.sh [release|debug]
+# Builds DiskChrona.app into ./build (menu bar agent, ad-hoc signed); release also packs a .dmg. Usage: ./build-app.sh [release|debug]
 set -e
 cd "$(dirname "$0")"
 CONFIG=${1:-release}
+VERSION=1.0.0
 swift build -c "$CONFIG"
 APP=build/DiskChrona.app
 rm -rf "$APP"
@@ -19,7 +20,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleExecutable</key><string>DiskChrona</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.1</string>
+    <key>CFBundleShortVersionString</key><string>$VERSION</string>
     <key>CFBundleVersion</key><string>1</string>
     <key>LSMinimumSystemVersion</key><string>15.0</string>
     <key>LSUIElement</key><true/>
@@ -29,3 +30,13 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 codesign --force --sign - "$APP"
 echo "$APP"
+[ "$CONFIG" = release ] || exit 0
+DMG=build/DiskChrona-$VERSION.dmg
+STAGE=build/dmg
+rm -rf "$STAGE" "$DMG"
+mkdir -p "$STAGE"
+cp -R "$APP" "$STAGE/"
+ln -s /Applications "$STAGE/Applications"
+hdiutil create -quiet -volname DiskChrona -srcfolder "$STAGE" -format UDZO "$DMG"
+rm -rf "$STAGE"
+echo "$DMG"
