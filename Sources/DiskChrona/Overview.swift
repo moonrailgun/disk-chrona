@@ -462,6 +462,9 @@ struct OverviewView: View {
                 }
                 if let b = hoverBucket {
                     RectangleMark(x: .value("时间", b, unit: data.unit)).foregroundStyle(Color.primary.opacity(0.06))
+                        .annotation(position: .top, spacing: 6, overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
+                            tooltip(b)
+                        }
                 }
                 ForEach(data.bars) { bar in
                     BarMark(x: .value("时间", bar.start, unit: data.unit), y: .value("变化", bar.value))
@@ -482,9 +485,6 @@ struct OverviewView: View {
                     Text("所选范围内没有观察到文件大小变化").font(.callout).foregroundStyle(.secondary)
                         .allowsHitTesting(false)
                 }
-            }
-            .overlay(alignment: (hover ?? domain.lowerBound) < domain.lowerBound + data.interval.duration / 2 ? .trailing : .leading) {
-                if let b = hoverBucket { tooltip(b).allowsHitTesting(false) }
             }
             .zIndex(1)
 
